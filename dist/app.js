@@ -11,11 +11,11 @@ function preset(n){if(n===3)return [trefoilPath()];if(n===0)return [circlePath(2
 function snapshot(){history.push(JSON.stringify({paths,choices,draft,modified,current}));if(history.length>40)history.shift();}
 function load(idx){current=idx;modified=false;draft=[];choices={};paths=preset(examples[idx][1]);let initial=Skein.intersections(paths);initial.hits.forEach(h=>{choices[h.key]=h.sign===1?h.over:!h.over;});history=[];selected=0;setMode('explore');render();calculate();}
 function setMode(m){mode=m;$('#explore').classList.toggle('active',m==='explore');$('#draw').classList.toggle('active',m==='draw');$('#hint').textContent=m==='draw'?'Drag to draw; release to close the loop.':'Click a crossing to switch it.';}
-function render(){svg.replaceChildren();let data=Skein.intersections(paths,choices);hits=data.hits;comps=data.comps;paths.forEach((p,i)=>line(p,{stroke:i%2?'#000':'#000'}));
- hits.forEach(h=>{let v=h.over?h.u:h.v,len=Math.hypot(...v),p=[h.x-12*v[0]/len,h.y-12*v[1]/len],q=[h.x+12*v[0]/len,h.y+12*v[1]/len];line([p,q],{stroke:'#fff','stroke-width':12});line([p,q],{stroke:(h.over?h.ai:h.bi)%2?'#000':'#000'});if(selected===h.id)element('circle',{cx:h.x,cy:h.y,r:24,fill:'#ddd',opacity:.45,stroke:'#000','stroke-dasharray':'3 4'});element('text',{x:h.x+17,y:h.y-13,fill:'#000','font-size':11,'font-family':'DM Sans, sans-serif'},svg).textContent=h.id;let target=element('circle',{cx:h.x,cy:h.y,r:18,fill:'transparent',cursor:'pointer','aria-label':'Switch crossing '+h.id,tabindex:0,role:'button'});let toggle=()=>{snapshot();choices[h.key]=!h.over;modified=true;selected=h.id;render();calculate();};target.addEventListener('click',e=>{e.stopPropagation();toggle();});target.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});});
+function render(){svg.replaceChildren();let data=Skein.intersections(paths,choices);hits=data.hits;comps=data.comps;let pieces=strandPieces(paths,hits);pieces.forEach(p=>line(p,{'stroke-width':10}));pieces.forEach(p=>line(p,{stroke:'#fff','stroke-width':4}));
+ hits.forEach(h=>{if(selected===h.id)element('circle',{cx:h.x,cy:h.y,r:24,fill:'#ddd',opacity:.45,stroke:'#000','stroke-dasharray':'3 4'});element('text',{x:h.x+17,y:h.y-13,fill:'#000','font-size':11,'font-family':'DM Sans, sans-serif'},svg).textContent=h.id;let target=element('circle',{cx:h.x,cy:h.y,r:18,fill:'transparent',cursor:'pointer','aria-label':'Switch crossing '+h.id,tabindex:0,role:'button'});let toggle=()=>{snapshot();choices[h.key]=!h.over;modified=true;selected=h.id;render();calculate();};target.addEventListener('click',e=>{e.stopPropagation();toggle();});target.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});});
  // Arrows on the first non-crossing segment show the traversal orientation.
  paths.forEach((p,i)=>{if(p.length<2)return;let a=p[0],b=p[1],u=[b[0]-a[0],b[1]-a[1]],l=Math.hypot(...u),m=[a[0]+u[0]*.23,a[1]+u[1]*.23],d=[u[0]/l,u[1]/l];line([[m[0]-7*d[0]+4*d[1],m[1]-7*d[1]-4*d[0]],m,[m[0]-7*d[0]-4*d[1],m[1]-7*d[1]+4*d[0]]],{stroke:'#000','stroke-width':3});});
- if(draft.length)line(draft,{'stroke-width':4});
+ if(draft.length){line(draft,{'stroke-width':10});line(draft,{stroke:'#fff','stroke-width':4});}
  $('#badge').textContent=hits.length+' crossings · '+paths.length+' component'+(paths.length!==1?'s':'');$('#knotname').textContent=modified?'Your edited diagram':examples[current][2];$('#presets').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',!modified&&i===current));$('#undo').disabled=!history.length;
 }
 function depth(n){return n.base?0:1+Math.max(depth(n.switched),depth(n.smoothed));}
@@ -23,10 +23,10 @@ function local(kind,sign){let diagA='M14 10L44 48',diagB='M44 10L14 48',over=(si
 function miniDiagram(n){
  let d='<svg class="mini" viewBox="0 0 580 580" role="img" aria-label="Intermediate link diagram, '+n.crossings+' crossings">';
  const path=(a,stroke,width=5)=>'<path d="'+a+'" fill="none" stroke="'+stroke+'" stroke-width="'+width+'" stroke-linecap="round" stroke-linejoin="round"/>';
- paths.forEach(p=>d+=path(p.map((v,i)=>(i?'L':'M')+v.join(',')).join(' '),'#000'));
+ const pieces=strandPieces(paths,hits,n.signs),pd=p=>p.map((v,i)=>(i?'L':'M')+v.join(',')).join(' ');pieces.forEach(p=>d+=path(pd(p),'#000',10));pieces.forEach(p=>d+=path(pd(p),'#fff',4));
  hits.forEach(h=>{const unit=v=>{let l=Math.hypot(...v);return v.map(x=>x/l);},u=unit(h.u),v=unit(h.v),pos=(v,k)=>[h.x+k*v[0],h.y+k*v[1]].join(',');
- if(n.signs[h.id]===undefined){d+='<circle cx="'+h.x+'" cy="'+h.y+'" r="15" fill="#fff"/>';d+=path('M'+pos(u,-15)+'Q'+h.x+','+h.y+' '+pos(v,15),'#000');d+=path('M'+pos(v,-15)+'Q'+h.x+','+h.y+' '+pos(u,15),'#000');}
- else {let over=n.signs[h.id]===h.sign?h.over:!h.over,w=over?u:v,a='M'+pos(w,-13)+'L'+pos(w,13);d+=path(a,'#fff',13)+path(a,'#000');}
+ if(n.signs[h.id]===undefined){d+='<circle cx="'+h.x+'" cy="'+h.y+'" r="15" fill="#fff"/>';let a='M'+pos(u,-15)+'Q'+h.x+','+h.y+' '+pos(v,15),b='M'+pos(v,-15)+'Q'+h.x+','+h.y+' '+pos(u,15);d+=path(a,'#000',10)+path(b,'#000',10)+path(a,'#fff',4)+path(b,'#fff',4);}
+
  if(n.crossing===h.id)d+='<circle cx="'+h.x+'" cy="'+h.y+'" r="25" fill="#ddd" opacity=".5" stroke="#000" stroke-dasharray="4 4"/>';
  });return d+'</svg>';
 }

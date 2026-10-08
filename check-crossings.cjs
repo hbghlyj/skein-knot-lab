@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),pieces=require('./dist/crossings.js');
+const a=[[0,0],[40,0],[45,10],[50,30],[80,40]],b=[[42.5,-20],[42.5,40]];
+const hit={id:1,ai:0,bi:1,i:1,j:0,t:.5,r:25/60,over:true,sign:1};
+let drawn=pieces([a,b],[hit]);
+assert.deepEqual(drawn[0],a,'Curved overstrand remains completely unchanged');
+assert.deepEqual(drawn.slice(1),[[[42.5,-20],[42.5,-5]],[[42.5,15],[42.5,40]]],'Only the understrand has a gap');
+drawn=pieces([a,b],[hit],{1:-1});
+assert.deepEqual(drawn.at(-1),b,'Switching preserves the new overstrand completely');
+assert.deepEqual(pieces([a,b],[hit],{}),[a,b],'A smoothed crossing is not cut as an active crossing');
+console.log('Passed: curved overstrand continuity, understrand gap, switch, and smoothing.');

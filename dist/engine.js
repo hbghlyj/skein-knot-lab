@@ -12,8 +12,10 @@ function smooth(comps,id){
 }
 function solve(comps,limit=18000){let count=0,memo=new Map();
  function rec(c){if(++count>limit)throw Error('This diagram has too many recursive branches. Try fewer crossings.');let key=JSON.stringify(c);if(memo.has(key))return {...memo.get(key),cached:true};
- let seen=new Set(),bad=null;for(let w of c){for(let v of w){if(!seen.has(v.id)){seen.add(v.id);if(!v.over){bad=v;break;}}}if(bad)break;}
- let node={components:c.length,crossings:new Set(c.flat().map(v=>v.id)).size,signs:Object.fromEntries(c.flat().map(v=>[v.id,v.sign]))};
+ // Keep component order and basepoints fixed along the switched branch.
+ let seen=new Set(),bad=null,badCount=0;
+ const traversal=c.map((w,i)=>({component:i+1,visits:w.map(v=>{let first=!seen.has(v.id);seen.add(v.id);if(first&&!v.over){badCount++;if(!bad)bad=v;}return {id:v.id,over:v.over,first};})}));
+ let node={components:c.length,crossings:new Set(c.flat().map(v=>v.id)).size,signs:Object.fromEntries(c.flat().map(v=>[v.id,v.sign])),badCount,traversal};
  if(!bad){node.poly=[c.length===1?1:0];node.base=true;node.reason=c.length===1?'Descending diagram → unknot':'Descending diagram → '+c.length+'-component unlink';}
  else {let sw=clone(c);sw.flat().forEach(v=>{if(v.id===bad.id){v.over=!v.over;v.sign=-v.sign;}});node.crossing=bad.id;node.sign=bad.sign;node.switched=rec(sw);node.smoothed=rec(smooth(c,bad.id));node.poly=add(node.switched.poly,shift(node.smoothed.poly,bad.sign));}
  memo.set(key,node);return node;

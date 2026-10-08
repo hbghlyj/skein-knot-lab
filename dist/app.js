@@ -1,10 +1,11 @@
 const $=s=>document.querySelector(s),svg=$('#canvas'),NS='http://www.w3.org/2000/svg';
 const examples=[['Unknot',1,'Unknot · 0₁'],['Unlink',0,'Two-component unlink'],['Hopf link',2,'Positive Hopf link'],['Trefoil',3,'Trefoil · 3₁'],['4-crossing link',4,'Torus link · T(2,4)'],['Cinquefoil',5,'Cinquefoil · 5₁']];
-let paths=[],choices={},hits=[],comps=[],mode='explore',draft=[],selected=0,current=5,modified=false,history=[],result;
+let paths=[],choices={},hits=[],comps=[],mode='explore',draft=[],selected=0,current=3,modified=false,history=[],result;
 function element(tag,attrs,parent=svg){let el=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));parent.append(el);return el;}
 function line(points,attrs={}){return element('path',{d:points.map((p,i)=>(i?'L':'M')+p.join(',')).join(' '),fill:'none',stroke:'#000','stroke-width':5,'stroke-linecap':'round','stroke-linejoin':'round',...attrs});}
 function circlePath(cx,cy,r){let ps=[];for(let i=0;i<=65;i++){let t=i/65*Math.PI*2;ps.push([cx+r*Math.cos(t),cy+r*Math.sin(t)]);}return ps;}
-function preset(n){if(n===0)return [circlePath(220,235,72),circlePath(375,235,72)];let x=[215,365],top=84,bottom=386,tracks=[[],[]];for(let s=0;s<2;s++){for(let k=0;k<=n;k++)tracks[s].push([x[(s+k)%2],top+(bottom-top)*k/n]);}
+function trefoilPath(){let p=[];for(let i=0;i<720;i++){let t=2*Math.PI*i/720+.007;p.push([290+75*(Math.sin(t)+2*Math.sin(2*t)),290+75*(Math.cos(t)-2*Math.cos(2*t))]);}p.push(p[0]);return p;}
+function preset(n){if(n===3)return [trefoilPath()];if(n===0)return [circlePath(220,235,72),circlePath(375,235,72)];let x=[215,365],top=84,bottom=386,tracks=[[],[]];for(let s=0;s<2;s++){for(let k=0;k<=n;k++)tracks[s].push([x[(s+k)%2],top+(bottom-top)*k/n]);}
  let visited=new Set(),out=[];for(let s=0;s<2;s++){if(visited.has(s))continue;let start=s,now=s,p=[];do{visited.add(now);let tr=tracks[now];p.push(...(p.length?tr.slice(1):tr));let end=(now+n)%2,outer=end===0?119:461;p.push([outer,bottom+22],[outer,top-22],[x[end],top]);now=end;}while(now!==start);out.push(p);}return out;
 }
 function snapshot(){history.push(JSON.stringify({paths,choices,draft,modified,current}));if(history.length>40)history.shift();}
@@ -57,4 +58,4 @@ function atlasGallery(ids,reference=false){$('#atlas-gallery').replaceChildren()
 function showMatches(poly){atlasGallery(atlasIndex[coefficientList(poly)]||[]);}
 $('#atlas-select').onchange=()=>{let k=$('#atlas-select').value;atlasGallery(k==='5_1'?['5_1','10_132']:k==='6_1'?['6_1','9_46']:[k],true);};
 $('#browse').onclick=()=>{$('#atlas-browser').hidden=!$('#atlas-browser').hidden;};
-load(5);
+load(3);
